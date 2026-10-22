@@ -118,6 +118,22 @@ def split_paragraphs(text: str) -> list[str]:
     return [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
 
 
+def invoice_untrusted_text(invoice: dict) -> str:
+    """Text plus any line description that is not already inside that text.
+
+    This is the untrusted string ``invoice-mcp`` screens before a body is
+    released. Callers outside that server import it from here so they do not
+    have to load the FastMCP process.
+    """
+    chunks = [str(invoice.get("text") or "")]
+    blob = chunks[0]
+    for line in invoice.get("lines") or []:
+        description = str(line.get("description") or "").strip()
+        if description and description not in blob:
+            chunks.append(description)
+    return "\n\n".join(chunk for chunk in chunks if chunk.strip())
+
+
 def _fingerprint(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 

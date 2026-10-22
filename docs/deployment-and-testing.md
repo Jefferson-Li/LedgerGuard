@@ -60,6 +60,22 @@ This environment validated `pytest`, `terraform fmt` / `validate`, and `docker c
 - UI: `http://localhost:8082` (`adk web`). Choose `ap_orchestrator`.
 - Agent card: `curl http://localhost:8081/.well-known/agent-card.json`. The card interface URL is `http://matching-agent:8081` on the Docker network. That is expected.
 - Deterministic report, no Gemini: `uv run python scripts/run_all_invoices.py`. Nine invoices have fixed match results. `INV-1010` is quarantined by the marker stand-in in that script. A real Model Armor verdict requires the running `invoice-mcp` with a template.
+- Exception triage. The default judge is a stub and the default screen is the same marker stand-in, so this does not call Gemini or Model Armor:
+
+  ```bash
+  uv run python scripts/triage.py plan
+  uv run python scripts/triage.py apply
+  uv run python scripts/triage.py reset
+  uv run python scripts/triage.py reset -yes
+  ```
+
+  `plan` writes `tmp/triage-plan.json` (override with `--out`) and prints a table: invoice, variance computed by code, verdict, cited rule, and reason. It does not change the decision store. `apply` records that plan in `tmp/triage-decisions.json` (override with `--store`). Applying again writes the same invoice keys. `reset` prints the decisions it would remove. `reset -yes` removes them. A second `reset -yes` removes nothing.
+
+  Set `LEDGERGUARD_FIRESTORE_DECISIONS` to a collection id to preview a Firestore write. The preview does not call Firestore unless you also pass `--firestore-apply` on `apply`, or `-yes --firestore-apply` on `reset`. The MCP servers still read the JSON files, not those documents.
+
+  `LEDGERGUARD_TRIAGE_JUDGE=gemini` calls Vertex AI. Gemini Flash goes first. Gemini Pro is used when confidence is below `LEDGERGUARD_TRIAGE_CONFIDENCE_THRESHOLD` (default `0.8`) or when the cited label is not in `policy/ap-policy.md`. With no Model Armor template, a live judge fails closed and escalates every invoice instead of sending unscanned text. The offline stub still escalates `INV-1010` and does not approve it. That result is the marker stand-in, not a live Model Armor score.
+
+  Cached answers live under `tmp/triage-cache`. The key is a hash of the computed invoice facts and the policy text. Change `policy/ap-policy.md` and the next `plan` re-judges. Re-running with the same facts and the same policy does not call the judge again.
 - Offline tests: `uv run pytest`.
 - Compose contracts, while the stack is up: `LEDGERGUARD_INTEGRATION=1 uv run pytest tests/integration`. These hit `/health` and the agent card. They do not call Gemini.
 - Draft eval, needs GCP and will compare against placeholder answers: `uv run adk eval services/ap_orchestrator evals/ap.evalset.json`. Do not treat the result as a score until the evalset is re-recorded.

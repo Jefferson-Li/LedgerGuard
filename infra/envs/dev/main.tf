@@ -217,11 +217,16 @@ module "matching" {
   max_instances      = 2
   invokers           = var.operator_members
   env = merge(local.common_env, {
-    ERP_MCP_URL                   = "${module.erp.uri}/mcp"
-    INVOICE_MCP_URL               = "${module.invoice.uri}/mcp"
-    MCP_AUTH_MODE                 = "id_token"
-    MODEL_ARMOR_PROMPT_TEMPLATE   = module.armor.prompt_template
-    MODEL_ARMOR_RESPONSE_TEMPLATE = module.armor.response_template
+    ERP_MCP_URL                             = "${module.erp.uri}/mcp"
+    INVOICE_MCP_URL                         = "${module.invoice.uri}/mcp"
+    MCP_AUTH_MODE                           = "id_token"
+    MODEL_ARMOR_PROMPT_TEMPLATE             = module.armor.prompt_template
+    MODEL_ARMOR_RESPONSE_TEMPLATE           = module.armor.response_template
+    LEDGERGUARD_TRIAGE_JUDGE                = "gemini"
+    LEDGERGUARD_TRIAGE_CONFIDENCE_THRESHOLD = var.triage_confidence_threshold
+    LEDGERGUARD_TRIAGE_FLASH_MODEL          = "gemini-2.5-flash"
+    LEDGERGUARD_TRIAGE_PRO_MODEL            = "gemini-2.5-pro"
+    LEDGERGUARD_POLICY_PATH                 = "/app/policy/ap-policy.md"
   })
 
   depends_on = [google_project_service.apis]

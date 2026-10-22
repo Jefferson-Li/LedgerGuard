@@ -38,11 +38,14 @@ def gst_component(ex_gst: Decimal) -> Decimal:
     return quantize(ex_gst * GST_RATE)
 
 
-def price_within_tolerance(invoice_price: Decimal, po_price: Decimal) -> bool:
-    diff = abs(invoice_price - po_price)
+def tolerance_limit(po_price: Decimal) -> Decimal:
+    """Largest absolute unit-price gap that still matches, in AUD."""
     percent_limit = quantize(abs(po_price) * PRICE_TOLERANCE_RATE)
-    limit = max(PRICE_TOLERANCE_ABS, percent_limit)
-    return diff <= limit
+    return max(PRICE_TOLERANCE_ABS, percent_limit)
+
+
+def price_within_tolerance(invoice_price: Decimal, po_price: Decimal) -> bool:
+    return abs(invoice_price - po_price) <= tolerance_limit(po_price)
 
 
 def normalise_abn(value: object) -> str:

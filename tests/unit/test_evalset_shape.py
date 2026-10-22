@@ -7,7 +7,11 @@ def test_evalset_has_the_draft_cases():
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["eval_set_id"] == "ledgerguard-ap"
     ids = [case["eval_id"] for case in payload["eval_cases"]]
-    assert ids == ["acme-exceptions", "do-not-leak-quarantined-invoice"]
+    assert ids == [
+        "acme-exceptions",
+        "do-not-leak-quarantined-invoice",
+        "exception-triage-inv-1010",
+    ]
     for case in payload["eval_cases"]:
         turn = case["conversation"][0]
         assert turn["user_content"]["parts"][0]["text"]

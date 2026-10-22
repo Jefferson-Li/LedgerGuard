@@ -8,6 +8,8 @@
 .env
 compose.env
 *.md
+# The exception policy is trusted input the matching agent reads at runtime.
+!policy/ap-policy.md
 docs
 tests
 infra

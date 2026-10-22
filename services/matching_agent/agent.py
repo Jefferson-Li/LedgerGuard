@@ -45,6 +45,9 @@ Do not ask for the invoice body and do not guess bank details.
 When an invoice is released, pass the tool JSON unchanged to reconcile_invoice_payload.
 Report that tool's status, exception_codes, and details exactly.
 Never calculate money yourself and never reveal a supplier bank account, BSB, or account number.
+When the reconcile tool reports status exception, call plan_exception_triage for that invoice id.
+Copy that tool's verdict, rule, variance, and reason. The variance was computed by code.
+If the verdict is ESCALATE, do not approve payment. Do not override a hard rule.
 """
 
 
@@ -86,6 +89,21 @@ def reconcile_invoice_payload(
     )
 
 
+def plan_exception_triage(invoice_id: str) -> dict:
+    """Plan a triage verdict for one invoice. Does not record a decision or approve payment.
+
+    The variance in the result was computed by code. A Model Armor match or a
+    bank-detail change is ESCALATE. Invoice text is screened before any judge
+    sees it, and a screening failure escalates.
+
+    Args:
+        invoice_id: Invoice id, for example INV-1003.
+    """
+    from matching_agent.triage.plan import plan_invoice
+
+    return plan_invoice(invoice_id)
+
+
 def build_plugin() -> ModelArmorPlugin | None:
     prompt = (
         os.environ.get("MODEL_ARMOR_PROMPT_TEMPLATE")
@@ -111,7 +129,12 @@ root_agent = LlmAgent(
     model=MODEL,
     description="Matches invoices to purchase orders and goods receipts with deterministic rules.",
     instruction=INSTRUCTION,
-    tools=[_toolset(ERP_MCP_URL), _toolset(INVOICE_MCP_URL), reconcile_invoice_payload],
+    tools=[
+        _toolset(ERP_MCP_URL),
+        _toolset(INVOICE_MCP_URL),
+        reconcile_invoice_payload,
+        plan_exception_triage,
+    ],
 )
 
 

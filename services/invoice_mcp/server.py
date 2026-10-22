@@ -16,7 +16,12 @@ from typing import Any
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse
 
-from invoice_mcp.armor import Screener, screen_paragraphs, screener_from_env
+from invoice_mcp.armor import (
+    Screener,
+    invoice_untrusted_text,
+    screen_paragraphs,
+    screener_from_env,
+)
 
 SERVICE = "invoice-mcp"
 logger = logging.getLogger(SERVICE)
@@ -58,17 +63,6 @@ def load_invoice(invoice_id: str) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def invoice_untrusted_text(invoice: dict[str, Any]) -> str:
-    """Text plus any line description that is not already inside that text."""
-    chunks = [str(invoice.get("text") or "")]
-    blob = chunks[0]
-    for line in invoice.get("lines") or []:
-        description = str(line.get("description") or "").strip()
-        if description and description not in blob:
-            chunks.append(description)
-    return "\n\n".join(chunk for chunk in chunks if chunk.strip())
 
 
 def public_invoice(invoice: dict[str, Any]) -> dict[str, Any]:

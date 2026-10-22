@@ -25,7 +25,7 @@ terraform validate
 
 ## What to keep true
 
-- Money stays in `services/matching_agent/rules.py`. Do not move GST or tolerances into a prompt.
+- Money stays in `services/matching_agent/rules.py`. Do not move GST or tolerances into a prompt. Exception triage may cite only labels from `policy/ap-policy.md`. An unknown label is low confidence and is escalated. The model does not set variance, GST, or tolerance.
 - `invoice-mcp` withholds the document body when any paragraph matches or when screening fails. Do not return the raw invoice on a match.
 - Do not set `MODEL_ARMOR_ALLOW_UNSCREENED` in Cloud Run or in the deploy workflow.
 - Offline tests must not call Gemini or Model Armor. Live checks belong behind the existing CI flags.

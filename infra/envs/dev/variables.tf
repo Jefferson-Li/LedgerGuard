@@ -45,6 +45,12 @@ variable "operator_members" {
   default     = []
 }
 
+variable "triage_confidence_threshold" {
+  type        = string
+  description = "Flash triage confidence below this value is re-judged by Gemini Pro. Code still escalates Model Armor matches and bank-detail changes."
+  default     = "0.8"
+}
+
 variable "bootstrap_image" {
   type        = string
   description = "Image used on the first apply. The deploy workflow replaces it."
