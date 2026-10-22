@@ -90,7 +90,7 @@ Region choice is recorded in [docs/adr/0001-model-armor-region.md](docs/adr/0001
 
 ## Quick start (Docker only)
 
-This is a learning scaffold. Docker Desktop with Compose v2 is enough to clone it and run the offline checks. The host does not need uv, Python, Terraform, tflint, or checkov. The test image carries those tools.
+This is a learning scaffold. Docker Desktop with Compose v2.17.0 or newer is enough to clone it and run the offline checks. The host does not need uv, Python, Terraform, tflint, or checkov. The test image carries those tools.
 
 ```bash
 git clone https://github.com/Jefferson-Li/LedgerGuard.git
@@ -106,15 +106,25 @@ docker compose --profile test up --build --abort-on-container-exit --exit-code-f
 
 That builds the four services and the test runner, waits until the services are healthy, and runs ruff, pytest, the offline red-team, the synthetic invoice report, `scripts/triage.py plan`, `apply`, and `reset -yes` on a temporary store, the compose contract tests, `terraform fmt -check`, `terraform init -backend=false` and `validate`, tflint, and checkov. Each step prints PASS or FAIL. A failed step makes the script exit non-zero. The script always runs `docker compose --profile test down` afterwards. `docker compose up` without the `test` profile still starts only the four services.
 
+The script exports `ADC_PATH` to the absolute path of the credentials file before it calls Compose. To start the four services yourself, set the same variable and then run Compose:
+
+```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
+docker compose up --build
+```
+
+On macOS and Linux, Compose also accepts a bare `docker compose up --build` when that file is at `~/.config/gcloud/application_default_credentials.json`. It expands the tilde. On Windows, set `ADC_PATH` to `%APPDATA%\gcloud\application_default_credentials.json`. The file has to exist before `docker compose up`. The test script creates a `{}` placeholder only when it is missing. `./scripts/run_local.sh` does not create one.
+
 The `{}` file exists so Compose can mount a file. It is not a credential. A live Gemini call and a live Model Armor verdict still need Application Default Credentials:
 
 ```bash
 gcloud auth application-default login
 ```
 
-Open a shell in the test image for a single command:
+Open a shell in the test image for a single command. Export the same absolute `ADC_PATH` the scripts use:
 
 ```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
 docker compose --profile test run --rm test-runner bash
 ```
 

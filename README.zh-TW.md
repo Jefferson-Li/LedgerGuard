@@ -90,7 +90,7 @@ Terraform 裡的其他控制：
 
 ## 快速開始（只需要 Docker）
 
-這是一份學習用的骨架。只要有 Docker Desktop 與 Compose v2，就可以 clone 下來並跑完離線檢查。主機不需要安裝 uv、Python、Terraform、tflint 或 checkov。這些工具都在測試映像裡。
+這是一份學習用的骨架。只要有 Docker Desktop 與 Compose v2.17.0 或更新的版本，就可以 clone 下來並跑完離線檢查。主機不需要安裝 uv、Python、Terraform、tflint 或 checkov。這些工具都在測試映像裡。
 
 ```bash
 git clone https://github.com/Jefferson-Li/LedgerGuard.git
@@ -106,15 +106,25 @@ docker compose --profile test up --build --abort-on-container-exit --exit-code-f
 
 這會建置四個服務與測試執行器，等到服務健康後，依序跑 ruff、pytest、離線 red-team、合成發票報告、在暫存目錄執行 `scripts/triage.py plan`、`apply` 與 `reset -yes`、Compose 契約測試、`terraform fmt -check`、`terraform init -backend=false` 與 `validate`、tflint，以及 checkov。每一步都會印出 PASS 或 FAIL。任一步失敗，腳本就以非零狀態結束。結束時一定會執行 `docker compose --profile test down`。不加 `test` profile 的 `docker compose up` 仍然只啟動四個服務。
 
+腳本在呼叫 Compose 之前，會把 `ADC_PATH` 設成憑證檔的絕對路徑。若要自己啟動四個服務，先設定同一個變數再執行 Compose：
+
+```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
+docker compose up --build
+```
+
+在 macOS 與 Linux 上，如果檔案就在 `~/.config/gcloud/application_default_credentials.json`，直接執行 `docker compose up --build` 也可以。Compose 會展開開頭的波浪號。在 Windows 上，請把 `ADC_PATH` 設成 `%APPDATA%\gcloud\application_default_credentials.json`。執行 `docker compose up` 之前，這個檔必須已經存在。測試腳本只在檔案不存在時建立 `{}` 佔位檔。`./scripts/run_local.sh` 不會建立佔位檔。
+
 `{}` 只是為了讓 Compose 有一個檔可以掛載。它不是憑證。即時的 Gemini 呼叫與即時的 Model Armor 判定，仍然需要 Application Default Credentials：
 
 ```bash
 gcloud auth application-default login
 ```
 
-若要在測試映像裡開一個 shell、自己下指令：
+若要在測試映像裡開一個 shell、自己下指令，請匯出腳本所用的同一個絕對路徑 `ADC_PATH`：
 
 ```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
 docker compose --profile test run --rm test-runner bash
 ```
 

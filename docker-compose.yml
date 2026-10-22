@@ -11,13 +11,19 @@
 # The test-runner service is behind the "test" profile. `docker compose up`
 # still starts only these four services. `./scripts/docker-test.sh` enables
 # the profile, waits until the four are healthy, and runs the offline suite.
+#
+# Needs Docker Compose 2.17.0 or newer. The ADC mount uses one default, not a
+# default nested inside another. Compose expands the leading tilde to the
+# current user's home directory when ADC_PATH is unset. The scripts export an
+# absolute ADC_PATH and do not rely on that default. compose.env.example is
+# always in the repository. scripts/run_local.sh and scripts/docker-test.sh
+# also export a copied compose.env when that file exists.
 
 x-gcp: &gcp
   env_file:
-    - path: compose.env
-      required: false
+    - compose.env.example
   volumes:
-    - ${ADC_PATH:-${HOME}/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
+    - ${ADC_PATH:-~/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
 
 services:
   erp-mcp:
@@ -156,8 +162,7 @@ services:
       context: .
       dockerfile: docker/test-runner.Dockerfile
     env_file:
-      - path: compose.env
-        required: false
+      - compose.env.example
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
@@ -169,7 +174,7 @@ services:
       MATCHING_CARD_URL: http://matching-agent:8081/.well-known/agent-card.json
     volumes:
       - .:/workspace
-      - ${ADC_PATH:-${HOME}/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
+      - ${ADC_PATH:-~/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
     working_dir: /workspace
     depends_on:
       erp-mcp:
