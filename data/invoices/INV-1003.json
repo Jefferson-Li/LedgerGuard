@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1003",
+  "supplier_name": "Harbour Timber Co",
+  "supplier_abn": "53000000770",
+  "po_number": "PO-1003",
+  "invoice_date": "2026-10-14",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "PIN-50",
+      "description": "Treated pine 90x45mm per metre",
+      "quantity": "50",
+      "unit_price_ex_gst": "9.50",
+      "line_ex_gst": "475.00",
+      "gst": "47.50",
+      "line_total": "522.50"
+    }
+  ],
+  "subtotal_ex_gst": "475.00",
+  "gst": "47.50",
+  "total_inc_gst": "522.50",
+  "text": "Tax invoice INV-1003 issued by Harbour Timber Co for goods supplied against PO-1003. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1003 on the remittance.\n\nGoods: 50 metres of treated pine. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

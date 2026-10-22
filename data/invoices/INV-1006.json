@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1006",
+  "supplier_name": "Southside Concrete",
+  "supplier_abn": "53000000851",
+  "po_number": "PO-1006",
+  "invoice_date": "2026-10-15",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "SND-2",
+      "description": "Washed sand per tonne",
+      "quantity": "2",
+      "unit_price_ex_gst": "45.40",
+      "line_ex_gst": "90.80",
+      "gst": "9.08",
+      "line_total": "99.88"
+    }
+  ],
+  "subtotal_ex_gst": "90.80",
+  "gst": "9.08",
+  "total_inc_gst": "99.88",
+  "text": "Tax invoice INV-1006 issued by Southside Concrete for goods supplied against PO-1006. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1006 on the remittance.\n\nGoods: 2 tonnes of washed sand. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

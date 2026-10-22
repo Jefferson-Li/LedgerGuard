@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1005",
+  "supplier_name": "Southside Concrete",
+  "supplier_abn": "53000000851",
+  "po_number": "PO-1005",
+  "invoice_date": "2026-10-15",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "CON-5",
+      "description": "20MPa concrete per cubic metre",
+      "quantity": "5",
+      "unit_price_ex_gst": "180.00",
+      "line_ex_gst": "900.00",
+      "gst": "90.00",
+      "line_total": "990.00"
+    }
+  ],
+  "subtotal_ex_gst": "900.00",
+  "gst": "90.00",
+  "total_inc_gst": "990.00",
+  "text": "Tax invoice INV-1005 issued by Southside Concrete for goods supplied against PO-1005. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1005 on the remittance.\n\nGoods: 5 cubic metres of 20MPa concrete. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

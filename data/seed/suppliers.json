@@ -1,0 +1,50 @@
+[
+  {
+    "supplier_id": "SUP-ACME",
+    "name": "Acme Building Supplies",
+    "abn": "51824753556",
+    "city": "Brisbane",
+    "state": "QLD",
+    "bank": {
+      "bsb": "062-000",
+      "account_number": "11111111",
+      "account_name": "Acme Building Supplies Pty Ltd"
+    }
+  },
+  {
+    "supplier_id": "SUP-HARB",
+    "name": "Harbour Timber Co",
+    "abn": "53000000770",
+    "city": "Brisbane",
+    "state": "QLD",
+    "bank": {
+      "bsb": "064-000",
+      "account_number": "22222222",
+      "account_name": "Harbour Timber Co Pty Ltd"
+    }
+  },
+  {
+    "supplier_id": "SUP-SOUTH",
+    "name": "Southside Concrete",
+    "abn": "53000000851",
+    "city": "Brisbane",
+    "state": "QLD",
+    "bank": {
+      "bsb": "084-000",
+      "account_number": "33333333",
+      "account_name": "Southside Concrete Pty Ltd"
+    }
+  },
+  {
+    "supplier_id": "SUP-RIVER",
+    "name": "River City Electrical",
+    "abn": "53000000883",
+    "city": "Brisbane",
+    "state": "QLD",
+    "bank": {
+      "bsb": "124-000",
+      "account_number": "44444444",
+      "account_name": "River City Electrical Pty Ltd"
+    }
+  }
+]

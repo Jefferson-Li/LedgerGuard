@@ -1,0 +1,12 @@
+[project]
+name = "ap-orchestrator"
+version = "0.1.0"
+description = "LedgerGuard AP orchestrator"
+requires-python = ">=3.12"
+dependencies = [
+  "google-adk[a2a,gcp]>=2.12",
+  "httpx>=0.27",
+]
+
+[tool.uv]
+package = false

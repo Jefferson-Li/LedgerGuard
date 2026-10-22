@@ -1,0 +1,164 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-packages --group dev --frozen
+      - name: Ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Pytest
+        run: uv run pytest
+      - name: Offline red-team
+        run: uv run python security/run_redteam.py --mode offline
+      - name: Synthetic invoice report
+        run: uv run python scripts/run_all_invoices.py
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+        working-directory: infra
+      - name: Terraform init and validate
+        working-directory: infra/envs/dev
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+      - name: tflint
+        run: |
+          tflint --init
+          tflint --recursive --config "${GITHUB_WORKSPACE}/.tflint.hcl"
+      - name: checkov
+        run: |
+          pip install checkov
+          checkov -d infra --framework terraform --quiet
+
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Placeholder ADC file
+        run: |
+          mkdir -p "${HOME}/.config/gcloud"
+          if [ ! -f "${HOME}/.config/gcloud/application_default_credentials.json" ]; then
+            printf '%s\n' '{}' > "${HOME}/.config/gcloud/application_default_credentials.json"
+          fi
+      - name: Build and start
+        run: docker compose up -d --build --wait
+      - name: Contract tests
+        env:
+          LEDGERGUARD_INTEGRATION: "1"
+        run: |
+          uv sync --all-packages --group dev --frozen
+          uv run pytest tests/integration
+      - name: Compose logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down --remove-orphans
+
+  cloud:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        env:
+          WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          if [ -n "${WIF_PROVIDER}" ] && [ -n "${WIF_SERVICE_ACCOUNT}" ] && [ -n "${GCP_PROJECT_ID}" ] && [ -n "${TF_STATE_BUCKET}" ]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "Cloud jobs skipped. Set vars.GCP_PROJECT_ID, vars.TF_STATE_BUCKET and secrets WIF_PROVIDER, WIF_SERVICE_ACCOUNT."
+          fi
+
+      - uses: google-github-actions/auth@v2
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: hashicorp/setup-terraform@v3
+        if: steps.gate.outputs.enabled == 'true'
+
+      - name: Terraform plan
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: infra/envs/dev
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ vars.GCP_REGION || 'us-central1' }}
+          TF_VAR_github_repository: ${{ github.repository }}
+        run: |
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          terraform plan -input=false -no-color -out=tfplan | tee plan.txt
+
+      - name: Comment plan on the pull request
+        if: steps.gate.outputs.enabled == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync('infra/envs/dev/plan.txt', 'utf8');
+            if (plan.length > 60000) plan = plan.slice(0, 60000) + '\n... truncated';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '### Terraform plan\n```\n' + plan + '\n```'
+            });
+
+      - uses: astral-sh/setup-uv@v5
+        if: steps.gate.outputs.enabled == 'true' && vars.RUN_LIVE_REDTEAM == 'true'
+      - name: Live red-team
+        if: steps.gate.outputs.enabled == 'true' && vars.RUN_LIVE_REDTEAM == 'true'
+        env:
+          MODEL_ARMOR_PROMPT_TEMPLATE: ${{ vars.MODEL_ARMOR_PROMPT_TEMPLATE }}
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          uv sync --all-packages --group dev --frozen
+          uv run python security/run_redteam.py --mode live
+
+      - name: ADK eval (draft evalset)
+        if: steps.gate.outputs.enabled == 'true' && vars.RUN_ADK_EVAL == 'true'
+        env:
+          GOOGLE_GENAI_USE_ENTERPRISE: "TRUE"
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          GOOGLE_CLOUD_LOCATION: global
+        run: |
+          uv sync --all-packages --group dev --frozen
+          uv run adk eval services/ap_orchestrator evals/ap.evalset.json

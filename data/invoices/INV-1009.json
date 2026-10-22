@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1009",
+  "supplier_name": "Acme Building Supplies",
+  "supplier_abn": "51824753556",
+  "po_number": "PO-1009",
+  "invoice_date": "2026-10-17",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "PLB-40",
+      "description": "Plasterboard sheet 2400x1200",
+      "quantity": "40",
+      "unit_price_ex_gst": "18.75",
+      "line_ex_gst": "750.00",
+      "gst": "75.00",
+      "line_total": "825.00"
+    }
+  ],
+  "subtotal_ex_gst": "750.00",
+  "gst": "75.00",
+  "total_inc_gst": "825.00",
+  "text": "Tax invoice INV-1009 issued by Acme Building Supplies for goods supplied against PO-1009. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1009 on the remittance.\n\nGoods: 40 sheets of plasterboard. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

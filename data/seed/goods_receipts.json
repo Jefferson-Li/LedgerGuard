@@ -1,0 +1,56 @@
+[
+  {
+    "grn_number": "GRN-1001",
+    "po_number": "PO-1001",
+    "received_date": "2026-10-12",
+    "lines": [{ "sku": "CEM-20", "quantity_received": "20" }]
+  },
+  {
+    "grn_number": "GRN-1002",
+    "po_number": "PO-1002",
+    "received_date": "2026-10-12",
+    "lines": [{ "sku": "BRK-01", "quantity_received": "100" }]
+  },
+  {
+    "grn_number": "GRN-1003",
+    "po_number": "PO-1003",
+    "received_date": "2026-10-13",
+    "lines": [{ "sku": "PIN-50", "quantity_received": "50" }]
+  },
+  {
+    "grn_number": "GRN-1004",
+    "po_number": "PO-1004",
+    "received_date": "2026-10-13",
+    "lines": [{ "sku": "HWD-10", "quantity_received": "10" }]
+  },
+  {
+    "grn_number": "GRN-1006",
+    "po_number": "PO-1006",
+    "received_date": "2026-10-14",
+    "lines": [{ "sku": "SND-2", "quantity_received": "2" }]
+  },
+  {
+    "grn_number": "GRN-1007",
+    "po_number": "PO-1007",
+    "received_date": "2026-10-15",
+    "lines": [{ "sku": "CND-30", "quantity_received": "20" }]
+  },
+  {
+    "grn_number": "GRN-1008",
+    "po_number": "PO-1008",
+    "received_date": "2026-10-15",
+    "lines": [{ "sku": "CAB-100", "quantity_received": "100" }]
+  },
+  {
+    "grn_number": "GRN-1009",
+    "po_number": "PO-1009",
+    "received_date": "2026-10-16",
+    "lines": [{ "sku": "PLB-40", "quantity_received": "40" }]
+  },
+  {
+    "grn_number": "GRN-1010",
+    "po_number": "PO-1010",
+    "received_date": "2026-10-16",
+    "lines": [{ "sku": "SCR-15", "quantity_received": "15" }]
+  }
+]

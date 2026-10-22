@@ -1,0 +1,98 @@
+# Docker Compose for the four services.
+#
+# Application Default Credentials are mounted read-only. Do not put a service
+# account key in this file or in the image. compose.env is optional; copy
+# compose.env.example if you want the container-only variable file.
+#
+# MODEL_ARMOR_ALLOW_UNSCREENED defaults to false. Without a template, invoice
+# reads fail closed. Set it to true only on a machine where you accept unscanned
+# synthetic invoices.
+
+x-gcp: &gcp
+  env_file:
+    - path: compose.env
+      required: false
+  volumes:
+    - ${ADC_PATH:-${HOME}/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
+
+services:
+  erp-mcp:
+    <<: *gcp
+    build:
+      context: .
+      dockerfile: services/erp_mcp/Dockerfile
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      PORT: "8080"
+    ports:
+      - "8090:8080"
+
+  invoice-mcp:
+    <<: *gcp
+    build:
+      context: .
+      dockerfile: services/invoice_mcp/Dockerfile
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      PORT: "8080"
+      MODEL_ARMOR_PROMPT_TEMPLATE: ${MODEL_ARMOR_PROMPT_TEMPLATE:-}
+      MODEL_ARMOR_TEMPLATE: ${MODEL_ARMOR_TEMPLATE:-}
+      MODEL_ARMOR_ALLOW_UNSCREENED: ${MODEL_ARMOR_ALLOW_UNSCREENED:-false}
+    ports:
+      - "8091:8080"
+
+  matching-agent:
+    <<: *gcp
+    build:
+      context: .
+      dockerfile: services/matching_agent/Dockerfile
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      GOOGLE_GENAI_USE_ENTERPRISE: ${GOOGLE_GENAI_USE_ENTERPRISE:-TRUE}
+      LEDGERGUARD_MODEL: ${LEDGERGUARD_MODEL:-gemini-2.5-flash}
+      PORT: "8081"
+      AGENT_URL: ${AGENT_URL:-http://matching-agent:8081}
+      ERP_MCP_URL: http://erp-mcp:8080/mcp
+      INVOICE_MCP_URL: http://invoice-mcp:8080/mcp
+      MCP_AUTH_MODE: ${MCP_AUTH_MODE:-none}
+      MODEL_ARMOR_PROMPT_TEMPLATE: ${MODEL_ARMOR_PROMPT_TEMPLATE:-}
+      MODEL_ARMOR_RESPONSE_TEMPLATE: ${MODEL_ARMOR_RESPONSE_TEMPLATE:-}
+      MODEL_ARMOR_TEMPLATE: ${MODEL_ARMOR_TEMPLATE:-}
+      LEDGERGUARD_TRIAGE_JUDGE: ${LEDGERGUARD_TRIAGE_JUDGE:-stub}
+      LEDGERGUARD_TRIAGE_CONFIDENCE_THRESHOLD: ${LEDGERGUARD_TRIAGE_CONFIDENCE_THRESHOLD:-0.8}
+      LEDGERGUARD_TRIAGE_FLASH_MODEL: ${LEDGERGUARD_TRIAGE_FLASH_MODEL:-gemini-2.5-flash}
+      LEDGERGUARD_TRIAGE_PRO_MODEL: ${LEDGERGUARD_TRIAGE_PRO_MODEL:-gemini-2.5-pro}
+      LEDGERGUARD_POLICY_PATH: /app/policy/ap-policy.md
+    ports:
+      - "8081:8081"
+    depends_on:
+      - erp-mcp
+      - invoice-mcp
+
+  ap-orchestrator:
+    <<: *gcp
+    build:
+      context: .
+      dockerfile: services/ap_orchestrator/Dockerfile
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      GOOGLE_GENAI_USE_ENTERPRISE: ${GOOGLE_GENAI_USE_ENTERPRISE:-TRUE}
+      LEDGERGUARD_MODEL: ${LEDGERGUARD_MODEL:-gemini-2.5-flash}
+      PORT: "8082"
+      MATCHING_AGENT_URL: ${MATCHING_AGENT_URL:-http://matching-agent:8081}
+      A2A_AUTH_MODE: ${A2A_AUTH_MODE:-none}
+      MODEL_ARMOR_PROMPT_TEMPLATE: ${MODEL_ARMOR_PROMPT_TEMPLATE:-}
+      MODEL_ARMOR_RESPONSE_TEMPLATE: ${MODEL_ARMOR_RESPONSE_TEMPLATE:-}
+      MODEL_ARMOR_TEMPLATE: ${MODEL_ARMOR_TEMPLATE:-}
+    ports:
+      - "8082:8082"
+    depends_on:
+      - matching-agent

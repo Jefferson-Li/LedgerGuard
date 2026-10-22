@@ -1,0 +1,141 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          if [ -n "${WIF_PROVIDER}" ] && [ -n "${WIF_SERVICE_ACCOUNT}" ] && [ -n "${GCP_PROJECT_ID}" ] && [ -n "${TF_STATE_BUCKET}" ]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "Deploy skipped. Configure WIF and the GCP repository variables before this workflow can build or deploy."
+          fi
+
+  deploy:
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform apply
+        working-directory: infra/envs/dev
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ vars.GCP_REGION || 'us-central1' }}
+          TF_VAR_github_repository: ${{ github.repository }}
+          TF_VAR_billing_account_id: ${{ vars.BILLING_ACCOUNT_ID }}
+          TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+        run: |
+          terraform init -input=false -backend-config="bucket=${TF_STATE_BUCKET}"
+          terraform apply -input=false -auto-approve
+
+      - name: Build and push images
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          repo="${REGION}-docker.pkg.dev/${PROJECT}/ledgerguard"
+          sha="${GITHUB_SHA}"
+          build() {
+            local name="$1"
+            local dockerfile="$2"
+            docker build --platform linux/amd64 -f "${dockerfile}" -t "${repo}/${name}:${sha}" .
+            docker push "${repo}/${name}:${sha}"
+          }
+          build erp-mcp services/erp_mcp/Dockerfile
+          build invoice-mcp services/invoice_mcp/Dockerfile
+          build matching-agent services/matching_agent/Dockerfile
+          build ap-orchestrator services/ap_orchestrator/Dockerfile
+
+      - name: Deploy no-traffic revisions
+        run: |
+          set -euo pipefail
+          repo="${REGION}-docker.pkg.dev/${PROJECT}/ledgerguard"
+          sha="${GITHUB_SHA}"
+          deploy_one() {
+            local name="$1"
+            gcloud run deploy "${name}" \
+              --image "${repo}/${name}:${sha}" \
+              --region "${REGION}" \
+              --no-traffic \
+              --tag green
+          }
+          deploy_one erp-mcp
+          deploy_one invoice-mcp
+          matching_uri="$(gcloud run services describe matching-agent --region "${REGION}" --format='value(status.url)')"
+          gcloud run deploy matching-agent \
+            --image "${repo}/matching-agent:${sha}" \
+            --region "${REGION}" \
+            --no-traffic \
+            --tag green \
+            --update-env-vars "AGENT_URL=${matching_uri}"
+          gcloud run deploy ap-orchestrator \
+            --image "${repo}/ap-orchestrator:${sha}" \
+            --region "${REGION}" \
+            --no-traffic \
+            --tag green
+
+      - uses: astral-sh/setup-uv@v5
+      - name: Smoke test tagged revisions
+        run: |
+          set -euo pipefail
+          uv sync --all-packages --group dev --frozen
+          smoke() {
+            local name="$1"
+            local url token
+            url="$(python3 scripts/print_tag_url.py "${name}" "${REGION}" green)"
+            token="$(gcloud auth print-identity-token --audiences="${url}")"
+            echo "smoke ${name} ${url}"
+            if [[ "${name}" == "ap-orchestrator" ]]; then
+              curl --fail-with-body -sS -H "Authorization: Bearer ${token}" "${url}/" -o /tmp/orch.txt
+              return
+            fi
+            if [[ "${name}" == "matching-agent" ]]; then
+              SMOKE_EXPECT_CARD=1 SMOKE_BASE_URL="${url}" SMOKE_ID_TOKEN="${token}" uv run pytest tests/smoke
+            else
+              SMOKE_BASE_URL="${url}" SMOKE_ID_TOKEN="${token}" uv run pytest tests/smoke
+            fi
+          }
+          smoke erp-mcp
+          smoke invoice-mcp
+          smoke matching-agent
+          smoke ap-orchestrator
+
+      - name: Shift traffic
+        run: |
+          set -euo pipefail
+          for name in erp-mcp invoice-mcp matching-agent ap-orchestrator; do
+            gcloud run services update-traffic "${name}" --region "${REGION}" --to-tags green=100
+          done
