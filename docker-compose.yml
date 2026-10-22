@@ -7,6 +7,10 @@
 # MODEL_ARMOR_ALLOW_UNSCREENED defaults to false. Without a template, invoice
 # reads fail closed. Set it to true only on a machine where you accept unscanned
 # synthetic invoices.
+#
+# The test-runner service is behind the "test" profile. `docker compose up`
+# still starts only these four services. `./scripts/docker-test.sh` enables
+# the profile, waits until the four are healthy, and runs the offline suite.
 
 x-gcp: &gcp
   env_file:
@@ -28,6 +32,18 @@ services:
       PORT: "8080"
     ports:
       - "8090:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8080'), timeout=3)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
 
   invoice-mcp:
     <<: *gcp
@@ -44,6 +60,18 @@ services:
       MODEL_ARMOR_ALLOW_UNSCREENED: ${MODEL_ARMOR_ALLOW_UNSCREENED:-false}
     ports:
       - "8091:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8080'), timeout=3)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
 
   matching-agent:
     <<: *gcp
@@ -71,6 +99,18 @@ services:
       LEDGERGUARD_POLICY_PATH: /app/policy/ap-policy.md
     ports:
       - "8081:8081"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8081'), timeout=3)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
     depends_on:
       - erp-mcp
       - invoice-mcp
@@ -94,5 +134,50 @@ services:
       MODEL_ARMOR_TEMPLATE: ${MODEL_ARMOR_TEMPLATE:-}
     ports:
       - "8082:8082"
+    # adk web has no /health route. Any HTTP response below 500 means it is up.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,sys,urllib.request; exec(\"url='http://127.0.0.1:%s/'%os.environ.get('PORT','8082')\\ntry:\\n urllib.request.urlopen(url, timeout=3)\\nexcept Exception as exc:\\n code=getattr(exc,'code',None)\\n sys.exit(0 if isinstance(code,int) and code<500 else 1)\\n\")",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 40s
     depends_on:
       - matching-agent
+
+  test-runner:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/test-runner.Dockerfile
+    env_file:
+      - path: compose.env
+        required: false
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/adc.json
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      UV_PROJECT_ENVIRONMENT: /opt/venv
+      LEDGERGUARD_TRIAGE_JUDGE: stub
+      ERP_HEALTH_URL: http://erp-mcp:8080/health
+      INVOICE_HEALTH_URL: http://invoice-mcp:8080/health
+      MATCHING_CARD_URL: http://matching-agent:8081/.well-known/agent-card.json
+    volumes:
+      - .:/workspace
+      - ${ADC_PATH:-${HOME}/.config/gcloud/application_default_credentials.json}:/tmp/keys/adc.json:ro
+    working_dir: /workspace
+    depends_on:
+      erp-mcp:
+        condition: service_healthy
+      invoice-mcp:
+        condition: service_healthy
+      matching-agent:
+        condition: service_healthy
+      ap-orchestrator:
+        condition: service_healthy
+    command: ["bash", "scripts/ci_in_docker.sh"]
