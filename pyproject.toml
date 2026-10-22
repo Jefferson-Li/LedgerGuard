@@ -1,0 +1,45 @@
+[project]
+name = "ledgerguard"
+version = "0.1.0"
+description = "Secure multi-agent invoice reconciliation on Google Cloud"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pyyaml>=6",
+  "ruff>=0.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "services/erp_mcp",
+  "services/invoice_mcp",
+  "services/matching_agent",
+  "services/ap_orchestrator",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "services"]
+pythonpath = [".", "services"]
+markers = [
+  "integration: live contract tests; skipped unless LEDGERGUARD_INTEGRATION=1",
+  "smoke: post-deploy checks; skipped unless SMOKE_BASE_URL or --base-url is set",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["services", "tests", "security", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"security/run_redteam.py" = ["E402", "E501"]

@@ -1,0 +1,142 @@
+[
+  {
+    "po_number": "PO-1001",
+    "supplier_id": "SUP-ACME",
+    "currency": "AUD",
+    "order_date": "2026-10-02",
+    "lines": [
+      {
+        "sku": "CEM-20",
+        "description": "General purpose cement 20kg",
+        "quantity": "20",
+        "unit_price_ex_gst": "12.50"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1002",
+    "supplier_id": "SUP-ACME",
+    "currency": "AUD",
+    "order_date": "2026-10-02",
+    "lines": [
+      {
+        "sku": "BRK-01",
+        "description": "Common clay brick",
+        "quantity": "100",
+        "unit_price_ex_gst": "1.10"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1003",
+    "supplier_id": "SUP-HARB",
+    "currency": "AUD",
+    "order_date": "2026-10-03",
+    "lines": [
+      {
+        "sku": "PIN-50",
+        "description": "Treated pine 90x45mm per metre",
+        "quantity": "50",
+        "unit_price_ex_gst": "8.00"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1004",
+    "supplier_id": "SUP-HARB",
+    "currency": "AUD",
+    "order_date": "2026-10-03",
+    "lines": [
+      {
+        "sku": "HWD-10",
+        "description": "Hardwood stud per metre",
+        "quantity": "10",
+        "unit_price_ex_gst": "22.00"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1005",
+    "supplier_id": "SUP-SOUTH",
+    "currency": "AUD",
+    "order_date": "2026-10-06",
+    "lines": [
+      {
+        "sku": "CON-5",
+        "description": "20MPa concrete per cubic metre",
+        "quantity": "5",
+        "unit_price_ex_gst": "180.00"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1006",
+    "supplier_id": "SUP-SOUTH",
+    "currency": "AUD",
+    "order_date": "2026-10-06",
+    "lines": [
+      {
+        "sku": "SND-2",
+        "description": "Washed sand per tonne",
+        "quantity": "2",
+        "unit_price_ex_gst": "45.00"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1007",
+    "supplier_id": "SUP-RIVER",
+    "currency": "AUD",
+    "order_date": "2026-10-07",
+    "lines": [
+      {
+        "sku": "CND-30",
+        "description": "PVC conduit 4 metre length",
+        "quantity": "30",
+        "unit_price_ex_gst": "6.40"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1008",
+    "supplier_id": "SUP-RIVER",
+    "currency": "AUD",
+    "order_date": "2026-10-07",
+    "lines": [
+      {
+        "sku": "CAB-100",
+        "description": "TPS cable 2.5mm per metre",
+        "quantity": "100",
+        "unit_price_ex_gst": "3.20"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1009",
+    "supplier_id": "SUP-ACME",
+    "currency": "AUD",
+    "order_date": "2026-10-08",
+    "lines": [
+      {
+        "sku": "PLB-40",
+        "description": "Plasterboard sheet 2400x1200",
+        "quantity": "40",
+        "unit_price_ex_gst": "18.75"
+      }
+    ]
+  },
+  {
+    "po_number": "PO-1010",
+    "supplier_id": "SUP-ACME",
+    "currency": "AUD",
+    "order_date": "2026-10-08",
+    "lines": [
+      {
+        "sku": "SCR-15",
+        "description": "Galvanised bugle-head screws, box of 500",
+        "quantity": "15",
+        "unit_price_ex_gst": "4.00"
+      }
+    ]
+  }
+]

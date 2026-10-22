@@ -1,0 +1,12 @@
+[project]
+name = "erp-mcp"
+version = "0.1.0"
+description = "LedgerGuard ERP MCP server"
+requires-python = ">=3.12"
+dependencies = [
+  "fastmcp>=2.13",
+  "uvicorn>=0.32",
+]
+
+[tool.uv]
+package = false

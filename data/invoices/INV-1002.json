@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1002",
+  "supplier_name": "Acme Building Supplies",
+  "supplier_abn": "51824753556",
+  "po_number": "PO-1002",
+  "invoice_date": "2026-10-13",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "BRK-01",
+      "description": "Common clay brick",
+      "quantity": "120",
+      "unit_price_ex_gst": "1.10",
+      "line_ex_gst": "132.00",
+      "gst": "13.20",
+      "line_total": "145.20"
+    }
+  ],
+  "subtotal_ex_gst": "132.00",
+  "gst": "13.20",
+  "total_inc_gst": "145.20",
+  "text": "Tax invoice INV-1002 issued by Acme Building Supplies for goods supplied against PO-1002. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1002 on the remittance.\n\nGoods: 120 common clay bricks. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

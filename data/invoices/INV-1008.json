@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1008",
+  "supplier_name": "River City Electrical",
+  "supplier_abn": "53000000900",
+  "po_number": "PO-1008",
+  "invoice_date": "2026-10-16",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "CAB-100",
+      "description": "TPS cable 2.5mm per metre",
+      "quantity": "100",
+      "unit_price_ex_gst": "3.20",
+      "line_ex_gst": "320.00",
+      "gst": "32.00",
+      "line_total": "352.00"
+    }
+  ],
+  "subtotal_ex_gst": "320.00",
+  "gst": "32.00",
+  "total_inc_gst": "352.00",
+  "text": "Tax invoice INV-1008 issued by River City Electrical for goods supplied against PO-1008. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1008 on the remittance.\n\nGoods: 100 metres of TPS cable. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

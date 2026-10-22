@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1007",
+  "supplier_name": "River City Electrical",
+  "supplier_abn": "53000000883",
+  "po_number": "PO-1007",
+  "invoice_date": "2026-10-16",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "CND-30",
+      "description": "PVC conduit 4 metre length",
+      "quantity": "30",
+      "unit_price_ex_gst": "6.40",
+      "line_ex_gst": "192.00",
+      "gst": "19.20",
+      "line_total": "211.20"
+    }
+  ],
+  "subtotal_ex_gst": "192.00",
+  "gst": "19.20",
+  "total_inc_gst": "211.20",
+  "text": "Tax invoice INV-1007 issued by River City Electrical for goods supplied against PO-1007. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1007 on the remittance.\n\nGoods: 30 lengths of PVC conduit. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}

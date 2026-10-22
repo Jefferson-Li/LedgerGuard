@@ -1,0 +1,12 @@
+[project]
+name = "matching-agent"
+version = "0.1.0"
+description = "LedgerGuard matching agent"
+requires-python = ">=3.12"
+dependencies = [
+  "google-adk[a2a,gcp,mcp]>=2.12",
+  "uvicorn>=0.32",
+]
+
+[tool.uv]
+package = false

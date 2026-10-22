@@ -1,0 +1,23 @@
+{
+  "invoice_id": "INV-1004",
+  "supplier_name": "Harbour Timber Co",
+  "supplier_abn": "53000000770",
+  "po_number": "PO-1004",
+  "invoice_date": "2026-10-14",
+  "currency": "AUD",
+  "lines": [
+    {
+      "sku": "HWD-10",
+      "description": "Hardwood stud per metre",
+      "quantity": "10",
+      "unit_price_ex_gst": "22.00",
+      "line_ex_gst": "220.00",
+      "gst": "33.00",
+      "line_total": "253.00"
+    }
+  ],
+  "subtotal_ex_gst": "220.00",
+  "gst": "33.00",
+  "total_inc_gst": "253.00",
+  "text": "Tax invoice INV-1004 issued by Harbour Timber Co for goods supplied against PO-1004. Amounts are in Australian dollars and are exclusive of GST. GST is shown at 10 percent. Please pay the GST-inclusive total within fourteen days and quote INV-1004 on the remittance.\n\nGoods: 10 metres of hardwood stud. Delivery was to the Brisbane yard. This document is synthetic demonstration data."
+}
