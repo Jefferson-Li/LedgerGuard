@@ -88,9 +88,49 @@ Other controls in the Terraform:
 
 Region choice is recorded in [docs/adr/0001-model-armor-region.md](docs/adr/0001-model-armor-region.md). Cloud Run versus Agent Runtime is recorded in [docs/adr/0002-cloud-run-vs-agent-runtime.md](docs/adr/0002-cloud-run-vs-agent-runtime.md).
 
-## Quick start
+## Quick start (Docker only)
 
-Offline, no GCP project:
+This is a learning scaffold. Docker Desktop with Compose v2 is enough to clone it and run the offline checks. The host does not need uv, Python, Terraform, tflint, or checkov. The test image carries those tools.
+
+```bash
+git clone https://github.com/Jefferson-Li/LedgerGuard.git
+cd LedgerGuard
+./scripts/docker-test.sh
+```
+
+`make test` runs the same script. The script writes `{}` to the Application Default Credentials path only when that file is missing. It does not replace a file that is already there. It then runs:
+
+```bash
+docker compose --profile test up --build --abort-on-container-exit --exit-code-from test-runner
+```
+
+That builds the four services and the test runner, waits until the services are healthy, and runs ruff, pytest, the offline red-team, the synthetic invoice report, `scripts/triage.py plan`, `apply`, and `reset -yes` on a temporary store, the compose contract tests, `terraform fmt -check`, `terraform init -backend=false` and `validate`, tflint, and checkov. Each step prints PASS or FAIL. A failed step makes the script exit non-zero. The script always runs `docker compose --profile test down` afterwards. `docker compose up` without the `test` profile still starts only the four services.
+
+The `{}` file exists so Compose can mount a file. It is not a credential. A live Gemini call and a live Model Armor verdict still need Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+Open a shell in the test image for a single command:
+
+```bash
+docker compose --profile test run --rm test-runner bash
+```
+
+The checkout is mounted at `/workspace`, and `python`, `ruff`, `pytest`, `terraform`, `tflint`, and `checkov` are on `PATH`. Exception triage from that shell:
+
+```bash
+python scripts/triage.py plan
+python scripts/triage.py apply
+python scripts/triage.py reset -yes
+```
+
+Add `--no-deps` when you do not need the four services started first. The default judge in that shell is the offline stub.
+
+## Quick start with uv
+
+The same checks can run on the host when uv is installed. Offline, no GCP project:
 
 ```bash
 uv sync --all-packages --group dev
@@ -118,7 +158,7 @@ cp compose.env.example compose.env
 
 Then open `http://localhost:8082` and select `ap_orchestrator`. The agent card is `http://localhost:8081/.well-known/agent-card.json`. Its interface URL points at `http://matching-agent:8081`, which is the Docker network address.
 
-`docker compose config` succeeds. Images were not built in the environment that produced this scaffold, so the first `docker compose up --build` is the build check. CI creates an empty ADC placeholder so the bind mount exists; that placeholder is not a credential, and Gemini calls will fail until a real ADC file is mounted.
+`docker compose config` succeeds. Images were not built in the environment that produced this scaffold, so the first `docker compose up --build` is the build check. `./scripts/docker-test.sh` creates an empty ADC placeholder when the file is missing so the bind mount exists. That placeholder is not a credential, and Gemini calls fail until a real ADC file is mounted.
 
 Full steps, including Terraform and rollback, are in [docs/deployment-and-testing.md](docs/deployment-and-testing.md).
 
@@ -129,7 +169,8 @@ Full steps, including Terraform and rollback, are in [docs/deployment-and-testin
 | `uv run pytest` | Matching rules against `data/expected_match.json`, GST rounding, ABN checksum, paragraph quarantine, exception packets, policy labels, citation checks, hard-rule overrides, Flash-to-Pro escalation, cache invalidation, plan/apply/reset, evalset shape, agent imports | No |
 | `security/run_redteam.py --mode offline` | Enforcement around seven cases: direct injection, jailbreak, malicious URI, a benign question, screening failure, `INV-1010`, and the dilution stand-in | No |
 | `scripts/run_all_invoices.py` | The same synthetic outcomes, with a marker stand-in for screening | No |
-| `pytest tests/integration` with `LEDGERGUARD_INTEGRATION=1` | MCP `/health` and the matching agent card. It does not call Gemini | Compose only |
+| `./scripts/docker-test.sh` | ruff, pytest, the offline red-team, the invoice report, triage plan/apply/reset, compose contracts, Terraform fmt/validate, tflint, and checkov, all inside Docker | No. Live Gemini and Model Armor still need ADC |
+| `pytest tests/integration` with `LEDGERGUARD_INTEGRATION=1` | MCP `/health` and the matching agent card. It does not call Gemini. Base URLs are `ERP_HEALTH_URL`, `INVOICE_HEALTH_URL`, and `MATCHING_CARD_URL` | Compose only |
 | `pytest tests/smoke` | `/health` on a tagged Cloud Run URL, and the agent card when `SMOKE_EXPECT_CARD=1` | Yes |
 | `adk eval` | Not a result yet. The evalset is a draft. CI runs it only when `vars.RUN_ADK_EVAL` is `true` | Yes |
 | Live red-team | Real `sanitizeUserPrompt` for attacks marked `live: call`. Dilution and screening-failure are `live: skip`. CI runs this only when `vars.RUN_LIVE_REDTEAM` is `true` | Yes |
@@ -148,7 +189,8 @@ security/redteam/   attack list
 infra/              Terraform env dev plus modules
 .github/workflows/  ci.yml and deploy.yml
 docs/               architecture, threat model, runbook, ADRs, deployment guide
-scripts/            local up, invoice report, Firestore dry run, traffic helpers
+docker/             test-runner image (uv, Terraform, tflint, checkov)
+scripts/            local up, Docker test, invoice report, triage, Firestore dry run, traffic helpers
 ```
 
 Each service has its own `pyproject.toml` (`uv`, `package = false`) and `Dockerfile`. The root `uv.lock` is what CI installs with `uv sync --frozen`. This scaffold was written against `google-adk` 2.12.0 (extras `a2a` and `gcp`, plus `mcp` on the matching agent), `a2a-sdk` 1.2.3, `fastmcp` 4.1.3, and `google-cloud-modelarmor` 0.7.2.

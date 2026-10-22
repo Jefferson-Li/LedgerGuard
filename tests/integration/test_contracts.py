@@ -2,6 +2,13 @@
 
 In-process tool names are covered by the service tests. These checks hit the
 compose network and do not call Gemini.
+
+Host defaults are the published ports on 127.0.0.1. Override them when the
+tests run in another container on the compose network:
+
+- ERP_HEALTH_URL (default http://127.0.0.1:8090/health)
+- INVOICE_HEALTH_URL (default http://127.0.0.1:8091/health)
+- MATCHING_CARD_URL (default http://127.0.0.1:8081/.well-known/agent-card.json)
 """
 
 from __future__ import annotations

@@ -88,9 +88,49 @@ Terraform 裡的其他控制：
 
 區域選擇記在 [docs/adr/0001-model-armor-region.md](docs/adr/0001-model-armor-region.md)。Cloud Run 與 Agent Runtime 的比較記在 [docs/adr/0002-cloud-run-vs-agent-runtime.md](docs/adr/0002-cloud-run-vs-agent-runtime.md)。
 
-## 快速開始
+## 快速開始（只需要 Docker）
 
-離線，不需要 GCP 專案：
+這是一份學習用的骨架。只要有 Docker Desktop 與 Compose v2，就可以 clone 下來並跑完離線檢查。主機不需要安裝 uv、Python、Terraform、tflint 或 checkov。這些工具都在測試映像裡。
+
+```bash
+git clone https://github.com/Jefferson-Li/LedgerGuard.git
+cd LedgerGuard
+./scripts/docker-test.sh
+```
+
+`make test` 執行同一個腳本。腳本只在 Application Default Credentials 檔不存在時，寫入 `{}`。已經存在的檔不會被覆蓋。它接著執行：
+
+```bash
+docker compose --profile test up --build --abort-on-container-exit --exit-code-from test-runner
+```
+
+這會建置四個服務與測試執行器，等到服務健康後，依序跑 ruff、pytest、離線 red-team、合成發票報告、在暫存目錄執行 `scripts/triage.py plan`、`apply` 與 `reset -yes`、Compose 契約測試、`terraform fmt -check`、`terraform init -backend=false` 與 `validate`、tflint，以及 checkov。每一步都會印出 PASS 或 FAIL。任一步失敗，腳本就以非零狀態結束。結束時一定會執行 `docker compose --profile test down`。不加 `test` profile 的 `docker compose up` 仍然只啟動四個服務。
+
+`{}` 只是為了讓 Compose 有一個檔可以掛載。它不是憑證。即時的 Gemini 呼叫與即時的 Model Armor 判定，仍然需要 Application Default Credentials：
+
+```bash
+gcloud auth application-default login
+```
+
+若要在測試映像裡開一個 shell、自己下指令：
+
+```bash
+docker compose --profile test run --rm test-runner bash
+```
+
+工作目錄掛載在 `/workspace`，`python`、`ruff`、`pytest`、`terraform`、`tflint` 與 `checkov` 都在 `PATH` 上。在那個 shell 裡做例外分診：
+
+```bash
+python scripts/triage.py plan
+python scripts/triage.py apply
+python scripts/triage.py reset -yes
+```
+
+若不需要先啟動四個服務，加上 `--no-deps`。那個 shell 預設的判斷器是離線用的 stub。
+
+## 使用 uv 的快速開始
+
+同一組檢查也可以在已安裝 uv 的主機上執行。離線，不需要 GCP 專案：
 
 ```bash
 uv sync --all-packages --group dev
@@ -118,7 +158,7 @@ cp compose.env.example compose.env
 
 然後開啟 `http://localhost:8082` 並選擇 `ap_orchestrator`。Agent card 在 `http://localhost:8081/.well-known/agent-card.json`。它的介面 URL 指向 `http://matching-agent:8081`，那是 Docker 網路位址。
 
-`docker compose config` 可以成功。產生這個骨架的環境沒有建置映像，所以第一次 `docker compose up --build` 才是建置檢查。CI 會建立一個空的 ADC 佔位檔，讓掛載來源存在；那個佔位檔不是憑證，在掛上真正的 ADC 檔之前，Gemini 呼叫會失敗。
+`docker compose config` 可以成功。產生這個骨架的環境沒有建置映像，所以第一次 `docker compose up --build` 才是建置檢查。`./scripts/docker-test.sh` 會在 ADC 檔不存在時建立一個空的佔位檔，讓掛載來源存在。那個佔位檔不是憑證，在掛上真正的 ADC 檔之前，Gemini 呼叫會失敗。
 
 完整步驟，包括 Terraform 與回滾，在 [docs/deployment-and-testing.md](docs/deployment-and-testing.md)。
 
@@ -129,7 +169,8 @@ cp compose.env.example compose.env
 | `uv run pytest` | 對照 `data/expected_match.json` 的對帳規則、GST 捨入、ABN 檢查碼、逐段隔離、例外單、政策標籤、引用檢查、硬規則覆寫、Flash 到 Pro 的升級、快取失效、plan/apply/reset、evalset 形狀、代理匯入 | 否 |
 | `security/run_redteam.py --mode offline` | 七個案例周圍的強制執行：直接注入、越獄、惡意 URI、一個良性問題、檢查失敗、`INV-1010`，以及稀釋替代器 | 否 |
 | `scripts/run_all_invoices.py` | 同一組合成結果，檢查使用標記替代器 | 否 |
-| 設定 `LEDGERGUARD_INTEGRATION=1` 後的 `pytest tests/integration` | MCP `/health` 與 matching 的 agent card。它不呼叫 Gemini | 只需要 Compose |
+| `./scripts/docker-test.sh` | 在 Docker 裡跑 ruff、pytest、離線 red-team、發票報告、triage plan/apply/reset、Compose 契約、Terraform fmt/validate、tflint 與 checkov | 否。即時 Gemini 與 Model Armor 仍需要 ADC |
+| 設定 `LEDGERGUARD_INTEGRATION=1` 後的 `pytest tests/integration` | MCP `/health` 與 matching 的 agent card。它不呼叫 Gemini。基底網址是 `ERP_HEALTH_URL`、`INVOICE_HEALTH_URL` 與 `MATCHING_CARD_URL` | 只需要 Compose |
 | `pytest tests/smoke` | 標籤 Cloud Run 網址上的 `/health`；當 `SMOKE_EXPECT_CARD=1` 時還有 agent card | 是 |
 | `adk eval` | 還沒有結果。Evalset 是草稿。只有 `vars.RUN_ADK_EVAL` 為 `true` 時 CI 才會執行 | 是 |
 | 即時 red-team | 對標成 `live: call` 的攻擊真正呼叫 `sanitizeUserPrompt`。稀釋與檢查失敗是 `live: skip`。只有 `vars.RUN_LIVE_REDTEAM` 為 `true` 時 CI 才會執行 | 是 |
@@ -148,7 +189,8 @@ security/redteam/   攻擊清單
 infra/              Terraform 的 dev 環境與模組
 .github/workflows/  ci.yml 與 deploy.yml
 docs/               架構、威脅模型、操作手冊、ADR、部署指南
-scripts/            本機啟動、發票報告、Firestore 演練、流量輔助腳本
+docker/             測試執行器映像（uv、Terraform、tflint、checkov）
+scripts/            本機啟動、Docker 測試、發票報告、分診、Firestore 演練、流量輔助腳本
 ```
 
 每個服務有自己的 `pyproject.toml`（`uv`，`package = false`）與 `Dockerfile`。CI 用根目錄的 `uv.lock` 執行 `uv sync --frozen`。這個骨架撰寫時對照的版本是 `google-adk` 2.12.0（額外元件 `a2a` 與 `gcp`，以及 matching agent 上的 `mcp`）、`a2a-sdk` 1.2.3、`fastmcp` 4.1.3，以及 `google-cloud-modelarmor` 0.7.2。

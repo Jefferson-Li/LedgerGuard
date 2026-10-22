@@ -4,6 +4,47 @@ This is the operator guide for the scaffold. Commands are the ones the workflows
 
 This environment validated `pytest`, `terraform fmt` / `validate`, and `docker compose config`. It did not apply Terraform, call Model Armor, or build the images.
 
+## Quick start (Docker only)
+
+Docker Desktop with Compose v2 is enough for the offline suite. uv, Python, Terraform, tflint, and checkov stay inside the test image. This is a learning command, not a deploy.
+
+```bash
+git clone https://github.com/Jefferson-Li/LedgerGuard.git
+cd LedgerGuard
+./scripts/docker-test.sh
+```
+
+`make test` is the same script. It writes `{}` to the Application Default Credentials path only when no file is there, then runs:
+
+```bash
+docker compose --profile test up --build --abort-on-container-exit --exit-code-from test-runner
+```
+
+and always finishes with `docker compose --profile test down`. `docker compose up` without `--profile test` still starts only `erp-mcp`, `invoice-mcp`, `matching-agent`, and `ap-orchestrator`.
+
+The suite prints PASS or FAIL for each step: ruff check, ruff format, pytest, the offline red-team, `scripts/run_all_invoices.py`, `scripts/triage.py plan`, `apply`, and `reset -yes` on a temporary store (nothing is written under the repository `tmp/`), the integration contracts with `LEDGERGUARD_INTEGRATION=1`, `terraform fmt -check`, `terraform init -backend=false` and `validate`, tflint, and checkov. Any failure exits non-zero.
+
+The `{}` file is not a login. Live Gemini and live Model Armor still need real Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+The image is `docker/test-runner.Dockerfile`, based on `ghcr.io/astral-sh/uv:0.13.5-python3.12-trixie-slim` (linux/amd64 and linux/arm64). `uv sync --all-packages --group dev --frozen` installs the lockfile into `/opt/venv`, outside the bind-mounted checkout. Terraform 1.17.0 is the version `hashicorp/setup-terraform@v3` resolved as `latest` on the 2026-10-22 CI run. tflint is v0.55.1. checkov is 3.3.30, the version `pip install checkov` installed on that run.
+
+Contract tests read `ERP_HEALTH_URL`, `INVOICE_HEALTH_URL`, and `MATCHING_CARD_URL`. The test runner points them at the compose network (`http://erp-mcp:8080/health`, `http://invoice-mcp:8080/health`, `http://matching-agent:8081/.well-known/agent-card.json`). On the host, the defaults stay `127.0.0.1` and the published ports.
+
+A shell in the test image, for one-off commands:
+
+```bash
+docker compose --profile test run --rm test-runner bash
+python scripts/triage.py plan
+python scripts/triage.py apply
+python scripts/triage.py reset -yes
+```
+
+`--no-deps` skips starting the four services when you only want the tools. The uv commands later in this guide remain the way to run the same pieces directly on a host that has uv installed.
+
 ## What needs what
 
 | Step | Offline | GCP | Console |
@@ -82,7 +123,7 @@ This environment validated `pytest`, `terraform fmt` / `validate`, and `docker c
 - Red-team: `uv run python security/run_redteam.py --mode offline` does not call Model Armor. `--base-url` is accepted and ignored; the runner screens text, it does not drive the chat UI. `--mode live` calls Model Armor for attacks marked `live: call` and needs `MODEL_ARMOR_PROMPT_TEMPLATE`.
 - Stop: `docker compose down`.
 
-CI's compose job writes `{}` to the ADC path when the file is missing so the bind mount is a file. That file is not a credential.
+`./scripts/docker-test.sh`, which the compose job runs, writes `{}` to the ADC path when the file is missing so the bind mount is a file. That file is not a credential.
 
 ## 2. Deploy to GCP
 

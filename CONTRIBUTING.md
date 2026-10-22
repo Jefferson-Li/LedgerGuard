@@ -12,6 +12,8 @@ uv run pytest
 uv run python security/run_redteam.py --mode offline
 ```
 
+A machine with only Docker Desktop (Compose v2) can run the same offline suite, plus the compose contracts and the Terraform checks, with `./scripts/docker-test.sh` or `make test`. That command does not install uv, Python, Terraform, tflint, or checkov on the host.
+
 Terraform:
 
 ```bash
@@ -34,4 +36,4 @@ terraform validate
 
 ## Pull requests
 
-`ci.yml` runs ruff, pytest, the offline red-team, Terraform fmt/validate, tflint, and checkov without cloud credentials. The compose job builds the images. Cloud plan, live red-team, and `adk eval` run only when the repository variables and Workload Identity secrets described in `docs/deployment-and-testing.md` are present.
+`ci.yml` runs ruff, pytest, the offline red-team, Terraform fmt/validate, tflint, and checkov without cloud credentials. The compose job runs `scripts/docker-test.sh`, the same command as a local Docker-only run. Cloud plan, live red-team, and `adk eval` run only when the repository variables and Workload Identity secrets described in `docs/deployment-and-testing.md` are present.
