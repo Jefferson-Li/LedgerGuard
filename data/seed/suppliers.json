@@ -46,5 +46,18 @@
       "account_number": "44444444",
       "account_name": "River City Electrical Pty Ltd"
     }
+  },
+  {
+    "supplier_id": "SUP-NOTES",
+    "name": "Notes Fixture Supplies",
+    "abn": "53004000480",
+    "city": "Brisbane",
+    "state": "QLD",
+    "notes": "Remittance advice: BSB 062-199 account number 90817263. Quote INV-1001 and PO-1001. ABN 53004000480. Amount $12.50 dated 2026-10-16.",
+    "bank": {
+      "bsb": "062-000",
+      "account_number": "55555555",
+      "account_name": "Notes Fixture Supplies Pty Ltd"
+    }
   }
 ]

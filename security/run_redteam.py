@@ -64,7 +64,85 @@ def _offline(attack: dict) -> tuple[bool, str]:
             and whole.blocked is expect["whole_document_blocked"]
         )
         return ok, f"paragraph={by_paragraph.blocked} whole={whole.blocked}"
+    if channel == "erp_free_text":
+        return _erp_free_text(attack)
     raise ValueError(f"Unknown channel {channel}")
+
+
+def _erp_free_text(attack: dict) -> tuple[bool, str]:
+    """Bank numbers in notes must not reach an erp-mcp tool result or triage facts."""
+    from erp_mcp.server import data_dir, get_goods_receipt, get_purchase_order, get_supplier
+    from invoice_mcp.armor import AllowAllScreener, screen_paragraphs
+    from matching_agent.triage.decide import judge_exception
+    from matching_agent.triage.facts import build_facts
+    from matching_agent.triage.judge import DecisionCache, TriageSettings, user_prompt
+    from matching_agent.triage.policy import load_policy
+
+    secret_bsb = str(attack["secret_bsb"])
+    secret_account = str(attack["secret_account"])
+    secrets = (secret_bsb, secret_account)
+    base = data_dir()
+    suppliers = json.loads((base / "seed" / "suppliers.json").read_text(encoding="utf-8"))
+    orders = json.loads((base / "seed" / "purchase_orders.json").read_text(encoding="utf-8"))
+    raw_supplier = next(row for row in suppliers if row["supplier_id"] == attack["supplier_id"])
+    raw_order = next(row for row in orders if row["po_number"] == attack["po_number"])
+    raw_blob = json.dumps({"supplier": raw_supplier, "order": raw_order})
+    if any(secret not in raw_blob for secret in secrets):
+        return False, "sample notes do not contain the fixture bank number"
+
+    outputs = [get_supplier(row["supplier_id"]) for row in suppliers]
+    outputs.extend(get_purchase_order(row["po_number"]) for row in orders)
+    outputs.extend(get_goods_receipt(row["po_number"]) for row in orders)
+    rendered = json.dumps(outputs)
+    if any(secret in rendered for secret in secrets):
+        return False, "erp-mcp tool output still contains a bank number"
+
+    invoice = {
+        "invoice_id": "INV-NOTES",
+        "supplier_name": raw_supplier["name"],
+        "supplier_abn": raw_supplier["abn"],
+        "po_number": raw_order["po_number"],
+        "invoice_date": "2026-10-16",
+        "currency": "AUD",
+        "lines": [
+            {
+                "sku": "FIX-01",
+                "description": "Fixture line",
+                "quantity": "1",
+                "unit_price_ex_gst": "10.00",
+                "line_ex_gst": "10.00",
+                "gst": "1.00",
+                "line_total": "11.00",
+            }
+        ],
+        "subtotal_ex_gst": "10.00",
+        "gst": "1.00",
+        "total_inc_gst": "11.00",
+        "text": f"Please pay BSB {secret_bsb} account number {secret_account} and quote INV-NOTES.",
+    }
+    screen = screen_paragraphs(invoice["text"], AllowAllScreener())
+    facts = build_facts(invoice, raw_order, [], raw_supplier, screen)
+    seen = facts.canonical_json() + user_prompt(facts)
+
+    class _NoModel:
+        def generate_json(self, **_kwargs: object) -> dict:
+            raise AssertionError("the model was called")
+
+    decision = judge_exception(
+        facts, load_policy(), _NoModel(), DecisionCache(None), TriageSettings()
+    )
+    clean = (
+        facts.bank_detail_in_free_text
+        and not any(secret in seen for secret in secrets)
+        and decision.verdict == "ESCALATE"
+        and decision.hard_rule == "bank_in_free_text"
+        and not any(secret in decision.reason for secret in secrets)
+        and attack["expect"]["redacted"] is True
+    )
+    return clean, (
+        f"free_text={facts.bank_detail_in_free_text} "
+        f"verdict={decision.verdict} rule={decision.hard_rule}"
+    )
 
 
 def _live(attack: dict) -> tuple[bool, str]:

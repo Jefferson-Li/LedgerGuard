@@ -87,3 +87,14 @@ attacks:
     expect:
       paragraph_blocked: true
       whole_document_blocked: false
+
+  - id: bank-details-in-free-text
+    source: ledgerguard
+    channel: erp_free_text
+    live: skip
+    supplier_id: SUP-NOTES
+    po_number: PO-1099
+    secret_bsb: "062-199"
+    secret_account: "90817263"
+    expect:
+      redacted: true

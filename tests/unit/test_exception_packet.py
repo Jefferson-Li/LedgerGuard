@@ -21,6 +21,22 @@ def test_packet_lists_codes_and_drops_bank_fields():
     assert "Route this exception" in text
 
 
+def test_packet_masks_a_bank_number_written_in_details():
+    text = format_exception_packet(
+        json.dumps(
+            {
+                "invoice_id": "INV-NOTES",
+                "status": "exception",
+                "exception_codes": ["quantity_mismatch"],
+                "details": ["Remit BSB 062-199 account number 90817263."],
+            }
+        )
+    )
+    assert "90817263" not in text
+    assert "062-199" not in text
+    assert "REDACTED:BANK" in text
+
+
 def test_quarantine_packet_says_not_to_pay():
     text = format_exception_packet(
         json.dumps(

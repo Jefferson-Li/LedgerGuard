@@ -18,6 +18,9 @@ def test_shipped_policy_has_stable_labels():
     assert "outside tolerance" in policy.lines["reject-3"]
     assert "bank-detail" in policy.lines["always-escalate-1"]
     assert "Model Armor" in policy.lines["always-escalate-2"]
+    assert policy.lines["always-escalate-3"].startswith("Screening")
+    assert "free text" in policy.lines["always-escalate-4"]
+    assert "free text" in policy.lines["rule-3"]
     assert [label for label in policy.order if label.startswith("reject-")] == [
         "reject-1",
         "reject-2",
