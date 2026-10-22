@@ -176,12 +176,12 @@ def mask_bank_values(text: str) -> str:
     if not spans:
         return text
     pieces: list[str] = []
-    cursor = 0
+    pos = 0
     for start, end in spans:
-        pieces.append(text[cursor:start])
+        pieces.append(text[pos:start])
         pieces.append(BANK_TOKEN)
-        cursor = end
-    pieces.append(text[cursor:])
+        pos = end
+    pieces.append(text[pos:])
     return "".join(pieces)
 
 
