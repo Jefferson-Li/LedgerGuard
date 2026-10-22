@@ -138,5 +138,20 @@
         "unit_price_ex_gst": "4.00"
       }
     ]
+  },
+  {
+    "po_number": "PO-1099",
+    "supplier_id": "SUP-NOTES",
+    "currency": "AUD",
+    "order_date": "2026-10-16",
+    "notes": "Pay BSB 062-199 Acct 90817263. This is not invoice INV-1001 and not $180.00.",
+    "lines": [
+      {
+        "sku": "FIX-01",
+        "description": "Redaction fixture, not part of the October invoice week",
+        "quantity": "1",
+        "unit_price_ex_gst": "10.00"
+      }
+    ]
   }
 ]

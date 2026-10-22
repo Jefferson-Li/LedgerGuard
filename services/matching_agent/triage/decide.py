@@ -3,7 +3,8 @@
 Flash answers first. A citation that is not in the policy is treated as
 confidence 0 and escalated to Pro. Pro is also used when Flash is below the
 configured confidence threshold. A Model Armor match, a screening failure,
-or a bank-detail change is ESCALATE whether or not a model was asked.
+a bank-detail change, or bank details found in free text is ESCALATE
+whether or not a model was asked.
 """
 
 from __future__ import annotations
@@ -34,6 +35,10 @@ _HARD_RULES = {
     "bank_details": (
         "always-escalate-1",
         "Bank details differ from the supplier master. Code escalates over any model verdict.",
+    ),
+    "bank_in_free_text": (
+        "always-escalate-4",
+        "Bank details were found in free text. Code escalates over any model verdict.",
     ),
 }
 
@@ -123,6 +128,8 @@ def _hard_kind(facts: InvoiceFacts) -> str | None:
         return "screening_failed"
     if facts.bank_details_changed:
         return "bank_details"
+    if facts.bank_detail_in_free_text:
+        return "bank_in_free_text"
     return None
 
 

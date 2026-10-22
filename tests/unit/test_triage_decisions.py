@@ -10,7 +10,7 @@ from matching_agent.triage.decide import (
     validate_citation,
 )
 from matching_agent.triage.facts import build_facts, load_catalog
-from matching_agent.triage.judge import DECISION_SCHEMA, DecisionCache, TriageSettings
+from matching_agent.triage.judge import DECISION_SCHEMA, DecisionCache, TriageSettings, user_prompt
 from matching_agent.triage.policy import load_policy
 
 POLICY = load_policy()
@@ -208,6 +208,33 @@ def test_bank_numbers_are_not_given_to_the_model():
     assert model.calls == []
     assert result.verdict == "ESCALATE"
     assert "99999999" not in result.reason
+
+
+def test_bank_details_in_free_text_escalate_without_the_number():
+    invoice, po, receipts, supplier, _facts_ignored = _facts("INV-1001")
+    invoice = json.loads(json.dumps(invoice))
+    supplier = json.loads(json.dumps(supplier))
+    invoice["notes"] = "Please pay BSB 062-199 account number 90817263."
+    invoice["text"] = (
+        invoice.get("text", "") + "\n\nPlease pay BSB 062-199 account number 90817263."
+    )
+    supplier["notes"] = "Same remittance 062-199 / 90817263."
+    screen = screen_paragraphs(invoice_untrusted_text(invoice), AllowAllScreener())
+    facts = build_facts(invoice, po, receipts, supplier, screen)
+    assert facts.bank_detail_in_free_text is True
+    assert facts.bank_details_changed is False
+    blob = facts.canonical_json() + user_prompt(facts)
+    assert "90817263" not in blob
+    assert "062-199" not in blob
+    model = ScriptedModel(
+        [{"reason": "pay it", "rule": "auto-approve-1", "verdict": "APPROVE", "confidence": 0.99}]
+    )
+    result = judge_exception(facts, POLICY, model, DecisionCache(None), SETTINGS)
+    assert model.calls == []
+    assert result.verdict == "ESCALATE"
+    assert result.hard_rule == "bank_in_free_text"
+    assert result.rule == "always-escalate-4"
+    assert "90817263" not in result.reason
 
 
 def test_cache_misses_when_the_policy_changes(tmp_path):

@@ -21,7 +21,7 @@ from matching_agent.rules import (
     reconcile,
     tolerance_limit,
 )
-from redact import redact_sensitive
+from redact import contains_bank_detail, mask_bank_values, redact_sensitive
 
 _BANK_KEYS = ("bsb", "account_number", "account_name", "bank_account")
 
@@ -82,6 +82,7 @@ class InvoiceFacts:
     abn_checksum_valid: bool
     abn_matches_master: bool
     bank_details_changed: bool
+    bank_detail_in_free_text: bool
     model_armor_flagged: bool
     screening_failed: bool
     screening_reason: str
@@ -91,7 +92,12 @@ class InvoiceFacts:
 
     @property
     def hard_blocked(self) -> bool:
-        return self.model_armor_flagged or self.screening_failed or self.bank_details_changed
+        return (
+            self.model_armor_flagged
+            or self.screening_failed
+            or self.bank_details_changed
+            or self.bank_detail_in_free_text
+        )
 
     def public_dict(self) -> dict[str, Any]:
         """Facts for the model. No bank numbers and no unreleased invoice text."""
@@ -107,6 +113,7 @@ class InvoiceFacts:
             "abn_checksum_valid": self.abn_checksum_valid,
             "abn_matches_master": self.abn_matches_master,
             "bank_details_changed": self.bank_details_changed,
+            "bank_detail_in_free_text": self.bank_detail_in_free_text,
             "model_armor_flagged": self.model_armor_flagged,
             "screening_failed": self.screening_failed,
             "screening_reason": self.screening_reason,
@@ -192,7 +199,13 @@ def build_facts(
     master_abn = normalise_abn(supplier.get("abn")) if supplier_known else ""
     untrusted = invoice_untrusted_text(invoice)
     blocked = bool(screen.blocked)
-    released = None if blocked else untrusted
+    # Fingerprint the original text. The copy a model can read has bank values masked.
+    released = None if blocked else mask_bank_values(untrusted)
+    free_text_bank = any(
+        contains_bank_detail(record)
+        for record in (invoice, purchase_order, goods_receipts, supplier)
+        if record is not None
+    )
     payload = {
         "lines": lines,
         "gst": {
@@ -213,6 +226,7 @@ def build_facts(
         abn_checksum_valid=is_valid_abn(invoice_abn),
         abn_matches_master=bool(supplier_known and invoice_abn == master_abn and invoice_abn != ""),
         bank_details_changed=bank_details_changed(invoice, supplier),
+        bank_detail_in_free_text=free_text_bank,
         model_armor_flagged=blocked and screen.reason == "match",
         screening_failed=blocked and screen.reason != "match",
         screening_reason=screen.reason,
