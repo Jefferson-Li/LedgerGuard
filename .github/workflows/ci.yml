@@ -64,7 +64,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Docker offline checks
-        run: bash scripts/docker-test.sh
+        run: |
+          export ADC_PATH="${HOME}/.config/gcloud/application_default_credentials.json"
+          bash scripts/docker-test.sh
 
   cloud:
     runs-on: ubuntu-latest

@@ -6,7 +6,7 @@ This environment validated `pytest`, `terraform fmt` / `validate`, and `docker c
 
 ## Quick start (Docker only)
 
-Docker Desktop with Compose v2 is enough for the offline suite. uv, Python, Terraform, tflint, and checkov stay inside the test image. This is a learning command, not a deploy.
+Docker Desktop with Compose v2.17.0 or newer is enough for the offline suite. uv, Python, Terraform, tflint, and checkov stay inside the test image. This is a learning command, not a deploy.
 
 ```bash
 git clone https://github.com/Jefferson-Li/LedgerGuard.git
@@ -21,6 +21,15 @@ docker compose --profile test up --build --abort-on-container-exit --exit-code-f
 ```
 
 and always finishes with `docker compose --profile test down`. `docker compose up` without `--profile test` still starts only `erp-mcp`, `invoice-mcp`, `matching-agent`, and `ap-orchestrator`.
+
+The script exports `ADC_PATH` to an absolute path before Compose runs. The direct command for the four services is:
+
+```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
+docker compose up --build
+```
+
+On macOS and Linux, `docker compose up --build` with no `ADC_PATH` also works when the credentials file is `~/.config/gcloud/application_default_credentials.json`. Compose expands that tilde. The compose file does not nest one interpolation inside another, which Compose 2.17 rejects. On Windows, set `ADC_PATH` to `%APPDATA%\gcloud\application_default_credentials.json`. The file must exist before `docker compose up`. The test script writes `{}` only when it is missing.
 
 The suite prints PASS or FAIL for each step: ruff check, ruff format, pytest, the offline red-team, `scripts/run_all_invoices.py`, `scripts/triage.py plan`, `apply`, and `reset -yes` on a temporary store (nothing is written under the repository `tmp/`), the integration contracts with `LEDGERGUARD_INTEGRATION=1`, `terraform fmt -check`, `terraform init -backend=false` and `validate`, tflint, and checkov. Any failure exits non-zero.
 
@@ -37,6 +46,7 @@ Contract tests read `ERP_HEALTH_URL`, `INVOICE_HEALTH_URL`, and `MATCHING_CARD_U
 A shell in the test image, for one-off commands:
 
 ```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
 docker compose --profile test run --rm test-runner bash
 python scripts/triage.py plan
 python scripts/triage.py apply
@@ -92,11 +102,14 @@ python scripts/triage.py reset -yes
 
 ## 1. Run locally
 
-`scripts/run_local.sh` refuses to start unless the ADC file exists, then runs `docker compose up --build`. The compose file mounts that file read-only at `/tmp/keys/adc.json` and sets `GOOGLE_APPLICATION_CREDENTIALS`. It does not use a service account key.
+`scripts/run_local.sh` refuses to start unless the ADC file exists, exports `ADC_PATH` to that absolute path, then runs `docker compose up --build`. The compose file mounts that file read-only at `/tmp/keys/adc.json` and sets `GOOGLE_APPLICATION_CREDENTIALS`. It does not use a service account key.
 
 ```bash
+export ADC_PATH="$HOME/.config/gcloud/application_default_credentials.json"
 ./scripts/run_local.sh
 ```
+
+`./scripts/run_local.sh` sets `ADC_PATH` itself when you do not. The export above is the same value, and it is the command to use when you call `docker compose` directly.
 
 - UI: `http://localhost:8082` (`adk web`). Choose `ap_orchestrator`.
 - Agent card: `curl http://localhost:8081/.well-known/agent-card.json`. The card interface URL is `http://matching-agent:8081` on the Docker network. That is expected.
